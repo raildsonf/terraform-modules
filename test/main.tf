@@ -6,6 +6,6 @@ module "palmeiras" {
   default_tags = {
     Team = "admin"
     OU   = "SRE"
-    component_url = "https://github.com/raildsonf/terraform-modules.git"
+    Component_url = "https://github.com/raildsonf/terraform-modules.git"
   }
 }
