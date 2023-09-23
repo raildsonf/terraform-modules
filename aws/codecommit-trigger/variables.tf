@@ -3,8 +3,8 @@ variable "repository_name" {
   description = "repo name"
 }
 variable "trigger_name" {
-  type = string
-  default = "all"
+  type = list(string)
+  default = ["all"]
 }
 variable "aws_sns_topic" {
   type = string
