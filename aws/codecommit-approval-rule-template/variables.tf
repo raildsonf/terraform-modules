@@ -7,3 +7,8 @@ variable "number_approvals" {
 variable "approval_pool_members" {
   type = list(string)
 }
+variable "region" {
+  type        = string
+  description = "Region"
+  default = "us-east-2"
+}
