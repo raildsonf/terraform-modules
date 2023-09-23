@@ -1,6 +1,7 @@
 variable "region" {
   type        = string
   description = "Region"
+  default = "us-east-2"
 }
 
 variable "repository_name" {
@@ -11,6 +12,7 @@ variable "repository_name" {
 variable "default_branch" {
   type        = string
   description = "Nome do CodeCommit repo"
+  default = "master"
 }
 
 variable "default_tags" {
