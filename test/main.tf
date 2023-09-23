@@ -1,6 +1,6 @@
-module "palmeiras" {
+module "main" {
   source          = "github.com/raildsonf/terraform-modules.git//aws/codecommit?ref=v1.0.4"
-  repository_name = "testeray"
+  repository_name = "teste"
   default_tags = {
     Team          = "admin"
     OU            = "SRE"
