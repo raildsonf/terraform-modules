@@ -11,7 +11,7 @@ variable "repository_name" {
 
 variable "default_branch" {
   type        = string
-  description = "Nome do CodeCommit repo"
+  description = "Nome da default branch"
   default = "master"
 }
 
