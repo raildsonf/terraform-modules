@@ -23,11 +23,6 @@ locals {
     STACK = "webtier"
     OU = "SRE"
   }
-  device_names = tolist([
-    "/dev/sda",
-    "/dev/sdb",
-    "/dev/sdc"
-  ])
 }
 
 variable "ebs_volume_count" {
