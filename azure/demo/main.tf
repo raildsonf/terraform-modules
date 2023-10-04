@@ -41,6 +41,7 @@ module "subnet1" {
   source = "github.com/raildsonf/terraform-modules.git//azure/subnet?ref=main"
   subnet_name = "subnet1"
   resource_group_name = "main"
-  vnet_name = "main"
+  vnet_name = "aks"
   address_prefixes = "10.0.1.0/24"
+  depends_on = [ module.vnet ]
 }
