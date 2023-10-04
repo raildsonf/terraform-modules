@@ -22,5 +22,5 @@ module "vnet_main" {
     OU      = "SRE",
     PROJECT = "unit"
   }
-  depends_on = [ module.resource_group_main ]
+  depends_on = [ moduel.resource_group_main.resource_group_id ]
 }
