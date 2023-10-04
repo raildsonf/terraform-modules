@@ -13,35 +13,26 @@ provider "azurerm" {
 module "resource_group" {
   source              = "github.com/raildsonf/terraform-modules.git//azure/resource-group?ref=main"
   resource_group_name = "main"
-  location            = "West US"
-  tags = {
-    TEAM    = "GK",
-    STACK   = "webtier",
-    OU      = "SRE",
-    PROJECT = "unit"
-  }
+  location            = "East US"
+  tags                = var.tags
 }
 
 module "vnet" {
   source              = "github.com/raildsonf/terraform-modules.git//azure/vnet?ref=main"
   resource_group_name = "main"
-  location            = "West US"
-  vnet_name           = "aks"
+  location            = "East US"
+  vnet_name           = "main"
   address_space       = "10.0.0.0/16"
-  tags = {
-    TEAM    = "GK",
-    STACK   = "webtier",
-    OU      = "SRE",
-    PROJECT = "unit"
-  }
-  depends_on = [ module.resource_group ]
+  tags                = var.tags
+  depends_on          = [module.resource_group]
 }
 
 module "subnet1" {
-  source = "github.com/raildsonf/terraform-modules.git//azure/subnet?ref=main"
-  subnet_name = "subnet1"
+  count               = 6
+  source              = "github.com/raildsonf/terraform-modules.git//azure/subnet?ref=main"
+  subnet_name         = "subnet-${count.index}"
   resource_group_name = "main"
-  vnet_name = "aks"
-  address_prefixes = "10.0.1.0/24"
-  depends_on = [ module.vnet ]
+  vnet_name           = "main"
+  address_prefixes    = "10.0.${count.index}.0/24"
+  depends_on          = [module.vnet]
 }
