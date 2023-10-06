@@ -27,12 +27,12 @@ module "vnet" {
   depends_on          = [module.resource_group]
 }
 
-module "subnet1" {
-  count               = 6
+module "subnets" {
+  for_each            = var.subnet_ranges
   source              = "github.com/raildsonf/terraform-modules.git//azure/subnet?ref=main"
-  subnet_name         = "subnet-${count.index}"
+  subnet_name         = "subnet-${each.key}"
   resource_group_name = "main"
   vnet_name           = "main"
-  address_prefixes    = "10.0.${count.index}.0/24"
+  address_prefixes    = each.value
   depends_on          = [module.vnet]
 }
