@@ -2,7 +2,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~>3.0.2"
+      version = "~>3.75.0"
     }
   }
 }
@@ -13,10 +13,18 @@ provider "azurerm" {
 variable "tags" {
   type = map(string)
   default = {
-    TEAM = "GK",
+    TEAM  = "GK",
     STACK = "webtier",
-    OU = "SRE"
+    OU    = "SRE"
   }
+}
+
+# 0. Create a RG
+module "resource_group" {
+  source              = "github.com/raildsonf/terraform-modules.git//azure/resource-group?ref=main"
+  resource_group_name = "main"
+  location            = "East US"
+  tags                = var.tags
 }
 
 # 1. Create a service principal
@@ -38,7 +46,7 @@ resource "azuread_service_principal_password" "main" {
 }
 
 resource "azurerm_role_assignment" "main" {
-  scope                = "/subscriptions/{id da subscript 1 aqui}"
+  scope                = "/subscriptions/4777093f-e44b-4d8d-9b6d-e28ad6dda062"
   role_definition_name = "Contributor"
   principal_id         = azuread_service_principal.main.object_id
 }
@@ -63,6 +71,18 @@ resource "azurerm_key_vault_access_policy" "main" {
     "Delete",
     "Get",
     "Set",
+    "List",
+    "Purge"
+  ]
+  key_permissions = [
+    "Delete",
+    "Get",
+    "List"
+  ]
+  storage_permissions = [
+    "Delete",
+    "Get",
+    "Set",
     "List"
   ]
 }
@@ -71,25 +91,27 @@ resource "azurerm_key_vault_secret" "main" {
   name         = azuread_application.main.application_id
   value        = azuread_service_principal_password.main.value
   key_vault_id = azurerm_key_vault.main.id
+  depends_on = [ azurerm_key_vault_access_policy.main ]
 }
 
 # 3. Create the AKS Cluster
 resource "azurerm_kubernetes_cluster" "main" {
   name                = "conta-digital"
-  kubernetes_version = "1.27.3"
+  kubernetes_version  = "1.27.3"
   location            = "East US"
   resource_group_name = "main"
   dns_prefix          = "conta-digital"
+  oidc_issuer_enabled = true
 
   default_node_pool {
-    name            = "default"
-    zones           = [1, 2, 3]
-    vm_size         = "Standard_D2_v2"
-    min_count       = 1
-    max_count       = 3
-    os_disk_size_gb = 90
+    name                = "default"
+    zones               = [1, 2, 3]
+    vm_size             = "Standard_D2_v2"
+    min_count           = 1
+    max_count           = 3
+    os_disk_size_gb     = 90
     enable_auto_scaling = true
-    type            = "VirtualMachineScaleSets"
+    type                = "VirtualMachineScaleSets"
     node_labels = {
       "node-pool" = "system",
       "env"       = "prd",
@@ -113,6 +135,7 @@ resource "azurerm_kubernetes_cluster" "main" {
     network_plugin    = "azure"
     load_balancer_sku = "standard"
   }
+  depends_on = [azurerm_role_assignment.main, module.resource_group]
 }
 
 # 4. Create Node Pools
@@ -120,7 +143,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "wind_apps" {
   name                  = "wapps"
   kubernetes_cluster_id = azurerm_kubernetes_cluster.main.id
   vm_size               = "Standard_DS2_v2"
-  orchestrator_version = azurerm_kubernetes_cluster.main.kubernetes_version
+  orchestrator_version  = azurerm_kubernetes_cluster.main.kubernetes_version
   zones                 = [1, 2, 3]
   min_count             = 1
   max_count             = 3
@@ -132,14 +155,15 @@ resource "azurerm_kubernetes_cluster_node_pool" "wind_apps" {
     "env"       = "prd"
     "type"      = "windows"
   }
-  tags = var.tags
+  tags       = var.tags
+  depends_on = [azurerm_kubernetes_cluster.main]
 }
 
 resource "azurerm_kubernetes_cluster_node_pool" "monitoring" {
   name                  = "linuxapps"
   kubernetes_cluster_id = azurerm_kubernetes_cluster.main.id
   vm_size               = "Standard_DS2_v2"
-  orchestrator_version = azurerm_kubernetes_cluster.main.kubernetes_version
+  orchestrator_version  = azurerm_kubernetes_cluster.main.kubernetes_version
   zones                 = [1, 2, 3]
   min_count             = 1
   max_count             = 3
@@ -151,5 +175,32 @@ resource "azurerm_kubernetes_cluster_node_pool" "monitoring" {
     "env"       = "prd"
     "type"      = "linux"
   }
-  tags = var.tags
+  tags       = var.tags
+  depends_on = [azurerm_kubernetes_cluster.main]
+}
+
+# 5. Install FluxCD
+data "azurerm_kubernetes_cluster" "credentials" {
+  name                = azurerm_kubernetes_cluster.main.name
+  resource_group_name = "main"
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = data.azurerm_kubernetes_cluster.credentials.kube_config.0.host
+    client_certificate     = base64decode(data.azurerm_kubernetes_cluster.credentials.kube_config.0.client_certificate)
+    client_key             = base64decode(data.azurerm_kubernetes_cluster.credentials.kube_config.0.client_key)
+    cluster_ca_certificate = base64decode(data.azurerm_kubernetes_cluster.credentials.kube_config.0.cluster_ca_certificate)
+
+  }
+}
+resource "helm_release" "fluxcd" {
+  name = "flux"
+  namespace = "flux-system"
+  create_namespace = true
+  repository = "https://fluxcd-community.github.io/helm-charts"
+  chart      = "flux2"
+  values = [
+    "${file("values.yaml")}"
+  ]
 }
