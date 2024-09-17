@@ -1,0 +1,7 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  AWSServiceRoleForEC2Spot:
+    Type: AWS::IAM::ServiceLinkedRole
+    Properties:
+      AWSServiceName: spot.amazonaws.com
+      Description: Create a service-linked role named AWSServiceRoleForEC2Spot for Karpenter to launch and manage Spot Instances on your behalf
